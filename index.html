@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Student Result Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <header>
+    <h1>📊 Student Result Management System</h1>
+    <p>Admin Upload Dashboard</p>
+  </header>
+
+  <!-- ================= UPLOAD RESULT ================= -->
+  <section class="card">
+    <h2>📤 Upload Result (PDF / Image)</h2>
+
+    <div class="upload-row">
+      <input type="file" id="file" />
+
+      <button id="uploadBtn" onclick="uploadResult()">
+        Upload & Process
+      </button>
+
+      <span id="uploadStatus" class="status-text"></span>
+    </div>
+
+    <div class="progress-box">
+      <div id="progressBar"></div>
+    </div>
+  </section>
+
+  <footer>
+    <p>© Student Result System | College Project</p>
+  </footer>
+
+  <!-- IMPORTANT -->
+  <script src="app.js" defer></script>
+
+</body>
+</html>

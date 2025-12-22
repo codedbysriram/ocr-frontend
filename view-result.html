@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>View Student Result</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="container">
+  <h2>View Student Result</h2>
+
+  <input type="text" id="regno" placeholder="Enter Register Number">
+  <br><br>
+  <button onclick="loadResult()">View Result</button>
+
+  <h3 id="studentInfo"></h3>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Sem</th>
+        <th>Subject Code</th>
+        <th>Subject Title</th>
+        <th>Credits</th>
+        <th>IA</th>
+        <th>EA</th>
+        <th>Total</th>
+        <th>Result</th>
+      </tr>
+    </thead>
+    <tbody id="resultBody"></tbody>
+  </table>
+</div>
+
+<script>
+async function loadResult() {
+  const regno = document.getElementById("regno").value.trim();
+  if (!regno) {
+    alert("Please enter register number");
+    return;
+  }
+
+  const res = await fetch(`http://localhost:5000/view-result/${regno}`);
+  const data = await res.json();
+
+  if (!data.student) {
+    alert("No result found");
+    return;
+  }
+
+  document.getElementById("studentInfo").innerText =
+    `Name: ${data.student.name} | Reg No: ${data.student.regno}`;
+
+  const tbody = document.getElementById("resultBody");
+  tbody.innerHTML = "";
+
+  data.marks.forEach(m => {
+    tbody.innerHTML += `
+      <tr>
+        <td>${m.semester}</td>
+        <td>${m.subject_code}</td>
+        <td>${m.subject_title}</td>
+        <td>${m.credits}</td>
+        <td>${m.ia}</td>
+        <td>${m.ea ?? "-"}</td>
+        <td>${m.total}</td>
+        <td>${m.result}</td>
+      </tr>
+    `;
+  });
+}
+</script>
+
+</body>
+</html>
