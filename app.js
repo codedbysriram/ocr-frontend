@@ -1,6 +1,5 @@
 const API = "https://backendocr-13.onrender.com";
 
-/* ================= UPLOAD WITH PROGRESS ================= */
 window.uploadResult = function () {
   const fileInput = document.getElementById("file");
   const status = document.getElementById("uploadStatus");
@@ -8,7 +7,8 @@ window.uploadResult = function () {
   const progressBox = document.querySelector(".progress-box");
   const progressBar = document.getElementById("progressBar");
 
-  // Validate file
+  if (!fileInput || !status || !btn || !progressBox || !progressBar) return;
+
   if (!fileInput.files.length) {
     status.textContent = "❌ Please select a file";
     status.className = "status-text status-failed";
@@ -18,50 +18,45 @@ window.uploadResult = function () {
   const formData = new FormData();
   formData.append("file", fileInput.files[0]);
 
-  // UI: loading state
   btn.disabled = true;
   status.textContent = "⏳ Uploading...";
   status.className = "status-text status-loading";
   progressBox.style.display = "block";
   progressBar.style.width = "0%";
-  progressBar.style.background =
-    "linear-gradient(90deg, #22c55e, #16a34a)";
+  progressBar.style.background = "linear-gradient(90deg, #22c55e, #16a34a)";
 
   const xhr = new XMLHttpRequest();
 
-  // Upload progress
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
-      const percent = Math.round((e.loaded / e.total) * 100);
-      progressBar.style.width = percent + "%";
+      progressBar.style.width = Math.round((e.loaded / e.total) * 100) + "%";
     }
   };
 
-  // Response handler
   xhr.onload = () => {
     btn.disabled = false;
 
+    let res;
     try {
-      const res = JSON.parse(xhr.responseText || "{}");
-
-      if (xhr.status === 200 && res.success) {
-        progressBar.style.width = "100%";
-        status.textContent = "✅ Upload successful & results stored";
-        status.className = "status-text status-success";
-      } else {
-        progressBar.style.background = "#dc2626";
-        status.textContent =
-          "❌ Upload failed: " + (res.message || "Server error");
-        status.className = "status-text status-failed";
-      }
-    } catch (err) {
+      res = JSON.parse(xhr.responseText);
+    } catch {
+      status.textContent = "❌ Server returned invalid response";
+      status.className = "status-text status-failed";
       progressBar.style.background = "#dc2626";
-      status.textContent = "❌ Invalid server response";
+      return;
+    }
+
+    if (xhr.status === 200 && res.success) {
+      progressBar.style.width = "100%";
+      status.textContent = "✅ Upload successful";
+      status.className = "status-text status-success";
+    } else {
+      progressBar.style.background = "#dc2626";
+      status.textContent = "❌ Upload failed: " + (res.message || "Server error");
       status.className = "status-text status-failed";
     }
   };
 
-  // Network error
   xhr.onerror = () => {
     btn.disabled = false;
     progressBar.style.background = "#dc2626";
@@ -69,15 +64,15 @@ window.uploadResult = function () {
     status.className = "status-text status-failed";
   };
 
-  // ✅ CORRECT BACKEND ENDPOINT
-  xhr.open("POST", `${API}/api/ocr/upload`, true);
+  xhr.open("POST", `${API}/upload-test`, true);
   xhr.send(formData);
 };
 
-/* ================= TABLE RENDER (SUBJECT TITLE WISE) ================= */
 function renderTable(rows) {
   const thead = document.querySelector("#resultTable thead");
   const tbody = document.querySelector("#resultTable tbody");
+
+  if (!thead || !tbody) return;
 
   thead.innerHTML = "";
   tbody.innerHTML = "";
@@ -87,10 +82,7 @@ function renderTable(rows) {
     return;
   }
 
-  // Collect unique SUBJECT TITLES
   const subjects = [...new Set(rows.map((r) => r.subject_title))];
-
-  // Group by student
   const students = {};
 
   rows.forEach((r) => {
@@ -104,84 +96,33 @@ function renderTable(rows) {
       };
     }
 
-    students[r.regno].subjects[r.subject_title] =
-      `${r.total} (${r.result})`;
-
-    if (r.result === "FAIL") {
-      students[r.regno].arrears++;
-    }
+    students[r.regno].subjects[r.subject_title] = `${r.total} (${r.result})`;
+    if (r.result === "FAIL") students[r.regno].arrears++;
   });
 
-  // Build table header
-  let headerRow = `
-    <tr>
-      <th>Reg No</th>
-      <th>Name</th>
-      <th>Semester</th>
-  `;
-
-  subjects.forEach((title) => {
-    headerRow += `<th>${title}</th>`;
-  });
-
+  let headerRow = `<tr><th>Reg No</th><th>Name</th><th>Semester</th>`;
+  subjects.forEach((t) => (headerRow += `<th>${t}</th>`));
   headerRow += `<th>Arrears</th></tr>`;
   thead.innerHTML = headerRow;
 
-  // Build table body
   Object.values(students).forEach((s) => {
-    let row = `
-      <tr>
-        <td>${s.regno}</td>
-        <td>${s.name}</td>
-        <td>${s.semester}</td>
-    `;
-
-    subjects.forEach((title) => {
-      row += `<td>${s.subjects[title] || "-"}</td>`;
-    });
-
-    row += `
-      <td style="color:${s.arrears ? "red" : "green"}">
-        ${s.arrears}
-      </td>
-    </tr>`;
-
+    let row = `<tr><td>${s.regno}</td><td>${s.name}</td><td>${s.semester}</td>`;
+    subjects.forEach((t) => (row += `<td>${s.subjects[t] || "-"}</td>`));
+    row += `<td style="color:${s.arrears ? "red" : "green"}">${s.arrears}</td></tr>`;
     tbody.innerHTML += row;
   });
 }
 
-/* ================= FILTER FUNCTIONS ================= */
-
-window.loadYear = async function (year) {
-  if (!year) return;
-  const res = await fetch(`${API}/year/${year}`);
-  const data = await res.json();
-  renderTable(data);
+window.loadAllResults = async function () {
+  try {
+    const res = await fetch(`${API}/results`);
+    const data = await res.json();
+    renderTable(data);
+  } catch {}
 };
 
-window.loadSemester = async function (sem) {
-  if (!sem) return;
-  const res = await fetch(`${API}/semester/${sem}`);
-  const data = await res.json();
-  renderTable(data);
-};
-
-window.loadSubject = async function (code) {
-  if (!code) return;
-  const res = await fetch(`${API}/subject/${code}`);
-  const data = await res.json();
-  renderTable(data);
-};
-
-window.loadArrears = async function (count) {
-  if (count === "") return;
-  const res = await fetch(`${API}/arrears/${count}`);
-  const data = await res.json();
-  renderTable(data);
-};
 function goToDashboard() {
-  // Change this path if your dashboard route is different
-  // window.location.href = "/admin/dashboard";
-  window.location.href = "http://localhost:5174/admin/dashboard";
-  window.location.href = "http://localhost:5173/admin/dashboard";
+  window.location.href = "https://ocr-frontend-murex.vercel.app/admin/dashboard";
 }
+
+document.addEventListener("DOMContentLoaded", loadAllResults);
