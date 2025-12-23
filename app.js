@@ -7,7 +7,9 @@ window.uploadResult = function () {
   const progressBox = document.querySelector(".progress-box");
   const progressBar = document.getElementById("progressBar");
 
-  if (!fileInput || !status || !btn || !progressBox || !progressBar) return;
+  if (!fileInput || !status || !btn || !progressBox || !progressBar) {
+    return;
+  }
 
   if (!fileInput.files.length) {
     status.textContent = "❌ Please select a file";
@@ -29,7 +31,8 @@ window.uploadResult = function () {
 
   xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
-      progressBar.style.width = Math.round((e.loaded / e.total) * 100) + "%";
+      const percent = Math.round((e.loaded / e.total) * 100);
+      progressBar.style.width = percent + "%";
     }
   };
 
@@ -40,19 +43,21 @@ window.uploadResult = function () {
     try {
       res = JSON.parse(xhr.responseText);
     } catch {
-      status.textContent = "❌ Server returned invalid response";
+      status.textContent = "❌ Invalid server response";
       status.className = "status-text status-failed";
       progressBar.style.background = "#dc2626";
       return;
     }
 
-    if (xhr.status === 200 && res.success) {
+    if (xhr.status === 200 && res.success === true) {
       progressBar.style.width = "100%";
       status.textContent = "✅ Upload successful";
       status.className = "status-text status-success";
+      loadAllResults();
     } else {
       progressBar.style.background = "#dc2626";
-      status.textContent = "❌ Upload failed: " + (res.message || "Server error");
+      status.textContent =
+        "❌ Upload failed: " + (res.message || "Server error");
       status.className = "status-text status-failed";
     }
   };
@@ -82,33 +87,48 @@ function renderTable(rows) {
     return;
   }
 
-  const subjects = [...new Set(rows.map((r) => r.subject_title))];
+  const subjects = [...new Set(rows.map(r => r.subject_title))];
   const students = {};
 
-  rows.forEach((r) => {
+  rows.forEach(r => {
     if (!students[r.regno]) {
       students[r.regno] = {
         regno: r.regno,
         name: r.name,
         semester: r.semester,
         subjects: {},
-        arrears: 0,
+        arrears: 0
       };
     }
 
-    students[r.regno].subjects[r.subject_title] = `${r.total} (${r.result})`;
+    students[r.regno].subjects[r.subject_title] =
+      `${r.total} (${r.result})`;
+
     if (r.result === "FAIL") students[r.regno].arrears++;
   });
 
-  let headerRow = `<tr><th>Reg No</th><th>Name</th><th>Semester</th>`;
-  subjects.forEach((t) => (headerRow += `<th>${t}</th>`));
+  let headerRow =
+    `<tr><th>Reg No</th><th>Name</th><th>Semester</th>`;
+  subjects.forEach(s => headerRow += `<th>${s}</th>`);
   headerRow += `<th>Arrears</th></tr>`;
   thead.innerHTML = headerRow;
 
-  Object.values(students).forEach((s) => {
-    let row = `<tr><td>${s.regno}</td><td>${s.name}</td><td>${s.semester}</td>`;
-    subjects.forEach((t) => (row += `<td>${s.subjects[t] || "-"}</td>`));
-    row += `<td style="color:${s.arrears ? "red" : "green"}">${s.arrears}</td></tr>`;
+  Object.values(students).forEach(s => {
+    let row =
+      `<tr>
+        <td>${s.regno}</td>
+        <td>${s.name}</td>
+        <td>${s.semester}</td>`;
+
+    subjects.forEach(sub =>
+      row += `<td>${s.subjects[sub] || "-"}</td>`
+    );
+
+    row +=
+      `<td style="color:${s.arrears ? "red" : "green"}">
+        ${s.arrears}
+      </td></tr>`;
+
     tbody.innerHTML += row;
   });
 }
@@ -122,7 +142,8 @@ window.loadAllResults = async function () {
 };
 
 function goToDashboard() {
-  window.location.href = "https://ocr-frontend-murex.vercel.app/admin/dashboard";
+  window.location.href =
+    "https://ocr-frontend-murex.vercel.app/admin/dashboard";
 }
 
 document.addEventListener("DOMContentLoaded", loadAllResults);

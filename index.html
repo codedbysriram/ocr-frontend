@@ -5,17 +5,17 @@
   <title>Student Result Dashboard</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="style.css" />
-  <button class="back-btn" onclick="goToDashboard()">← Back</button>
 </head>
 
 <body>
+
+  <button class="back-btn" onclick="goToDashboard()">← Back</button>
 
   <header>
     <h1>📊 Student Result Management System</h1>
     <p>Admin Upload Dashboard</p>
   </header>
 
-  <!-- ================= UPLOAD RESULT ================= -->
   <section class="card">
     <h2>📤 Upload Result (PDF / Image)</h2>
 
@@ -29,18 +29,15 @@
       <span id="uploadStatus" class="status-text"></span>
     </div>
 
-    <div class="progress-box">
+    <div class="progress-box" style="display:none">
       <div id="progressBar"></div>
     </div>
-    
   </section>
 
   <footer>
     <p>© Student Result System | College Project</p>
   </footer>
 
-  <!-- IMPORTANT -->
   <script src="app.js" defer></script>
-
 </body>
 </html>
