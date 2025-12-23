@@ -152,3 +152,35 @@ footer {
     padding: 22px;
   }
 }
+
+/* ================= BACK BUTTON ================= */
+.back-btn {
+  position: absolute;
+  top: 22px;
+  left: 20px;
+
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  background: linear-gradient(135deg, #2563eb, #1e40af);
+  color: #ffffff;
+
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+
+  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
+  transition: all 0.25s ease;
+}
+
+/* Hover effect */
+.back-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.6);
+}
+
+/* Active (click) effect */
+.back-btn:active {
+  transform: scale(0.97);
+}

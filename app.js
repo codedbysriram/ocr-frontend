@@ -1,4 +1,4 @@
-const API = "http://localhost:5000";
+const API = "https://backendocr-13.onrender.com";
 
 /* ================= UPLOAD WITH PROGRESS ================= */
 window.uploadResult = function () {
@@ -179,3 +179,9 @@ window.loadArrears = async function (count) {
   const data = await res.json();
   renderTable(data);
 };
+function goToDashboard() {
+  // Change this path if your dashboard route is different
+  // window.location.href = "/admin/dashboard";
+  window.location.href = "http://localhost:5174/admin/dashboard";
+  window.location.href = "http://localhost:5173/admin/dashboard";
+}
