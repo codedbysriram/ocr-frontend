@@ -1,4 +1,4 @@
-const API = "https://backendocr-13.onrender.com";
+const API = "https://backendocr-16.onrender.com";
 
 window.uploadResult = function () {
   const fileInput = document.getElementById("file");
