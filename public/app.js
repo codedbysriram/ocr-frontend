@@ -1,176 +1,149 @@
-require("dotenv").config();
-const express = require("express");
-const cors = require("cors");
-const multer = require("multer");
-const mysql = require("mysql2/promise");
-const fs = require("fs");
-const path = require("path");
-const pdfParse = require("pdf-parse");
-const Tesseract = require("tesseract.js");
+const API = "https://backendocr-28.onrender.com";
 
-const app = express();
-const PORT = process.env.PORT || 5000;
+window.uploadResult = function () {
+  const fileInput = document.getElementById("file");
+  const status = document.getElementById("uploadStatus");
+  const btn = document.getElementById("uploadBtn");
+  const progressBox = document.querySelector(".progress-box");
+  const progressBar = document.getElementById("progressBar");
 
-/* ================= MIDDLEWARE ================= */
-app.use(cors());
-app.use(express.json());
-
-/* ================= MYSQL ================= */
-const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
-  password: process.env.DB_PASS,
-  database: process.env.DB_NAME,
-});
-
-/* ================= UPLOAD ================= */
-const UPLOAD_DIR = path.join(__dirname, "uploads");
-if (!fs.existsSync(UPLOAD_DIR)) fs.mkdirSync(UPLOAD_DIR);
-
-const upload = multer({
-  dest: UPLOAD_DIR,
-  limits: { fileSize: 10 * 1024 * 1024 },
-});
-
-/* ================= OCR TEXT EXTRACT ================= */
-async function extractText(filePath, mimeType) {
-  if (mimeType === "application/pdf") {
-    const data = await pdfParse(fs.readFileSync(filePath));
-    return data.text;
-  } else {
-    const result = await Tesseract.recognize(filePath, "eng");
-    return result.data.text;
-  }
-}
-
-/* ================= PARSE TEXT TO RESULTS ================= */
-/*
-EXPECTED OCR TEXT FORMAT (example):
-CT001 Sriram 4 DBMS 25 55 80 PASS
-*/
-function parseResults(text) {
-  const lines = text.split("\n").map(l => l.trim()).filter(Boolean);
-  const results = [];
-
-  lines.forEach(line => {
-    const parts = line.split(/\s+/);
-
-    if (parts.length < 8) return;
-
-    const [
-      regno,
-      name,
-      semester,
-      subject_title,
-      ia,
-      ea,
-      total,
-      result,
-    ] = parts;
-
-    results.push({
-      regno,
-      name,
-      department: "Computer Technology",
-      year: Math.ceil(Number(semester) / 2),
-      semester: Number(semester),
-      subject_code: subject_title.substring(0, 6).toUpperCase(),
-      subject_title,
-      ia: Number(ia),
-      ea: Number(ea),
-      total: Number(total),
-      result: result.toUpperCase(),
-    });
-  });
-
-  return results;
-}
-
-/* ================= UPLOAD + OCR ================= */
-app.post("/upload-test", upload.single("file"), async (req, res) => {
-  if (!req.file) {
-    return res.status(400).json({ success: false });
+  if (!fileInput || !status || !btn || !progressBox || !progressBar) {
+    return;
   }
 
-  try {
-    const text = await extractText(req.file.path, req.file.mimetype);
-    const rows = parseResults(text);
+  if (!fileInput.files.length) {
+    status.textContent = "❌ Please select a file";
+    status.className = "status-text status-failed";
+    return;
+  }
 
-    if (rows.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "OCR failed to extract results",
-      });
+  const formData = new FormData();
+  formData.append("file", fileInput.files[0]);
+
+  btn.disabled = true;
+  status.textContent = "⏳ Uploading...";
+  status.className = "status-text status-loading";
+  progressBox.style.display = "block";
+  progressBar.style.width = "0%";
+  progressBar.style.background = "linear-gradient(90deg, #22c55e, #16a34a)";
+
+  const xhr = new XMLHttpRequest();
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      const percent = Math.round((e.loaded / e.total) * 100);
+      progressBar.style.width = percent + "%";
+    }
+  };
+
+  xhr.onload = () => {
+    btn.disabled = false;
+
+    let res;
+    try {
+      res = JSON.parse(xhr.responseText);
+    } catch {
+      status.textContent = "❌ Invalid server response";
+      status.className = "status-text status-failed";
+      progressBar.style.background = "#dc2626";
+      return;
     }
 
-    const sql = `
-      INSERT INTO student_results
-      (regno, name, department, year, semester,
-       subject_code, subject_title, ia, ea, total, result)
-      VALUES ?
-      ON DUPLICATE KEY UPDATE
-        ia = VALUES(ia),
-        ea = VALUES(ea),
-        total = VALUES(total),
-        result = VALUES(result)
-    `;
+    if (xhr.status === 200 && res.success === true) {
+      progressBar.style.width = "100%";
+      status.textContent = "✅ Upload successful";
+      status.className = "status-text status-success";
+      loadAllResults();
+    } else {
+      progressBar.style.background = "#dc2626";
+      status.textContent =
+        "❌ Upload failed: " + (res.message || "Server error");
+      status.className = "status-text status-failed";
+    }
+  };
 
-    const values = rows.map(r => [
-      r.regno,
-      r.name,
-      r.department,
-      r.year,
-      r.semester,
-      r.subject_code,
-      r.subject_title,
-      r.ia,
-      r.ea,
-      r.total,
-      r.result,
-    ]);
+  xhr.onerror = () => {
+    btn.disabled = false;
+    progressBar.style.background = "#dc2626";
+    status.textContent = "❌ Network error";
+    status.className = "status-text status-failed";
+  };
 
-    await db.query(sql, [values]);
+  xhr.open("POST", `${API}/upload-test`, true);
+  xhr.send(formData);
+};
 
-    fs.unlinkSync(req.file.path);
+function renderTable(rows) {
+  const thead = document.querySelector("#resultTable thead");
+  const tbody = document.querySelector("#resultTable tbody");
 
-    res.json({ success: true });
+  if (!thead || !tbody) return;
 
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ success: false });
+  thead.innerHTML = "";
+  tbody.innerHTML = "";
+
+  if (!rows || rows.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="100%">No data found</td></tr>`;
+    return;
   }
-});
 
-/* ================= FETCH RESULTS ================= */
-app.get("/results", async (_, res) => {
-  const [rows] = await db.query(`
-    SELECT regno, name, semester, subject_title, total, result
-    FROM student_results
-    ORDER BY regno, semester
-  `);
-  res.json(rows);
-});
+  const subjects = [...new Set(rows.map(r => r.subject_title))];
+  const students = {};
 
-/* ================= START ================= */
-app.listen(PORT, () => {
-  console.log(`🚀 OCR Backend running on ${PORT}`);
-});
-/* ================= LOAD ALL RESULTS ================= */
+  rows.forEach(r => {
+    if (!students[r.regno]) {
+      students[r.regno] = {
+        regno: r.regno,
+        name: r.name,
+        semester: r.semester,
+        subjects: {},
+        arrears: 0
+      };
+    }
+
+    students[r.regno].subjects[r.subject_title] =
+      `${r.total} (${r.result})`;
+
+    if (r.result === "FAIL") students[r.regno].arrears++;
+  });
+
+  let headerRow =
+    `<tr><th>Reg No</th><th>Name</th><th>Semester</th>`;
+  subjects.forEach(s => headerRow += `<th>${s}</th>`);
+  headerRow += `<th>Arrears</th></tr>`;
+  thead.innerHTML = headerRow;
+
+  Object.values(students).forEach(s => {
+    let row =
+      `<tr>
+        <td>${s.regno}</td>
+        <td>${s.name}</td>
+        <td>${s.semester}</td>`;
+
+    subjects.forEach(sub =>
+      row += `<td>${s.subjects[sub] || "-"}</td>`
+    );
+
+    row +=
+      `<td style="color:${s.arrears ? "red" : "green"}">
+        ${s.arrears}
+      </td></tr>`;
+
+    tbody.innerHTML += row;
+  });
+}
+
 window.loadAllResults = async function () {
   try {
     const res = await fetch(`${API}/results`);
     const data = await res.json();
     renderTable(data);
-  } catch (err) {
-    console.error("Result fetch error", err);
-  }
+  } catch {}
 };
 
-/* ================= BACK BUTTON ================= */
 function goToDashboard() {
   window.location.href =
-    "https://ocr-frontend-murex.vercel.app/admin/dashboard";
+    "https://dashboard-teal-seven-78.vercel.app/";
 }
 
-/* ================= AUTO LOAD ================= */
 document.addEventListener("DOMContentLoaded", loadAllResults);
