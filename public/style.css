@@ -1,4 +1,4 @@
-/* ================= GLOBAL ================= */
+/* ================= RESET ================= */
 * {
   box-sizing: border-box;
   margin: 0;
@@ -6,87 +6,138 @@
   font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
 }
 
+/* ================= PAGE BACKGROUND ================= */
 body {
   min-height: 100vh;
-  background: linear-gradient(135deg, #0f172a, #020617);
+  background:
+    radial-gradient(circle at top left, rgba(37, 99, 235, 0.25), transparent 45%),
+    radial-gradient(circle at bottom right, rgba(22, 163, 74, 0.18), transparent 45%),
+    linear-gradient(135deg, #020617, #020617);
   color: #e5e7eb;
+
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
+/* ================= BACK BUTTON ================= */
+.back-btn {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+
+  padding: 6px 14px;
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  background: linear-gradient(135deg, #1e3a8a, #020617);
+  color: #ffffff;
+
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+
+  box-shadow: 0 6px 16px rgba(30, 58, 138, 0.45);
+  transition: all 0.25s ease;
+}
+
+.back-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 24px rgba(37, 99, 235, 0.6);
+}
+
 /* ================= HEADER ================= */
 header {
   width: 100%;
-  padding: 28px 20px;
+  padding: 34px 20px;
   text-align: center;
-  background: linear-gradient(135deg, #1d4ed8, #1e40af);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
 }
 
 header h1 {
-  font-size: 1.9rem;
+  font-size: 1.8rem;
   font-weight: 700;
+  color: #e0e7ff;
 }
 
 header p {
   margin-top: 6px;
   font-size: 0.95rem;
-  color: #c7d2fe;
+  color: #94a3b8;
 }
 
-/* ================= CARD ================= */
+/* ================= CARD (LIKE LOGIN BOX) ================= */
 .card {
-  background: rgba(15, 23, 42, 0.95);
   width: 100%;
-  max-width: 520px;
-  margin-top: 40px;
-  padding: 26px 24px;
+  max-width: 420px;
+  margin-top: 30px;
+  padding: 36px 32px;
+
+  background: rgba(15, 23, 42, 0.95);
   border-radius: 18px;
-  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
-  border: 1px solid rgba(99, 102, 241, 0.25);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.65);
+
+  display: flex;
+  flex-direction: column;
+  z-index: 1;
 }
 
+/* ================= CARD TITLE ================= */
 .card h2 {
   text-align: center;
-  margin-bottom: 20px;
-  font-size: 1.25rem;
-  color: #93c5fd;
+  margin-bottom: 24px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #e0e7ff;
 }
 
 /* ================= UPLOAD ROW ================= */
 .upload-row {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 18px;
 }
 
-/* File input */
+/* ================= FILE INPUT ================= */
 .upload-row input[type="file"] {
-  padding: 10px;
-  background: #020617;
-  border: 1px dashed #3b82f6;
-  border-radius: 10px;
+  padding: 12px 14px;
+  font-size: 0.95rem;
   color: #e5e7eb;
-  cursor: pointer;
-}
 
-/* Upload button */
-#uploadBtn {
-  padding: 12px;
-  font-size: 1rem;
-  font-weight: 600;
-  background: linear-gradient(135deg, #3b82f6, #2563eb);
-  border: none;
-  border-radius: 12px;
-  color: white;
+  background: #020617;
+  border: 1px dashed rgba(148, 163, 184, 0.35);
+  border-radius: 10px;
+
   cursor: pointer;
   transition: all 0.25s ease;
 }
 
+.upload-row input[type="file"]:hover {
+  border-color: #2563eb;
+}
+
+/* ================= UPLOAD BUTTON ================= */
+#uploadBtn {
+  margin-top: 6px;
+  padding: 12px;
+  font-size: 1rem;
+  font-weight: 600;
+
+  background: linear-gradient(135deg, #1e3a8a, #020617);
+  color: #ffffff;
+
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+
+  box-shadow: 0 10px 26px rgba(30, 58, 138, 0.55);
+  transition: all 0.3s ease;
+}
+
 #uploadBtn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(59, 130, 246, 0.5);
+  box-shadow: 0 18px 40px rgba(37, 99, 235, 0.65);
 }
 
 #uploadBtn:disabled {
@@ -121,9 +172,9 @@ header p {
   background: #020617;
   border-radius: 999px;
   overflow: hidden;
-  margin-top: 18px;
+  margin-top: 16px;
   display: none;
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid rgba(37, 99, 235, 0.3);
 }
 
 #progressBar {
@@ -143,44 +194,12 @@ footer {
 
 /* ================= RESPONSIVE ================= */
 @media (max-width: 480px) {
+  .card {
+    margin: 0 14px;
+    padding: 30px 24px;
+  }
+
   header h1 {
     font-size: 1.5rem;
   }
-
-  .card {
-    margin: 24px 12px;
-    padding: 22px;
-  }
-}
-
-/* ================= BACK BUTTON ================= */
-.back-btn {
-  position: absolute;
-  top: 22px;
-  left: 20px;
-
-  padding: 6px 14px;
-  font-size: 0.85rem;
-  font-weight: 600;
-
-  background: linear-gradient(135deg, #2563eb, #1e40af);
-  color: #ffffff;
-
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-
-  box-shadow: 0 6px 16px rgba(37, 99, 235, 0.45);
-  transition: all 0.25s ease;
-}
-
-/* Hover effect */
-.back-btn:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 10px 24px rgba(59, 130, 246, 0.6);
-}
-
-/* Active (click) effect */
-.back-btn:active {
-  transform: scale(0.97);
 }
