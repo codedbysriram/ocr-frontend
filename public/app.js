@@ -1,5 +1,11 @@
-const API = "https://backendocr-28.onrender.com";
+/* ================= API AUTO SWITCH ================= */
+const API =
+  window.location.hostname === "localhost" ||
+  window.location.hostname === "127.0.0.1"
+    ? "http://localhost:5000"
+    : "https://backendocr-28.onrender.com";
 
+/* ================= UPLOAD ================= */
 window.uploadResult = function () {
   const fileInput = document.getElementById("file");
   const status = document.getElementById("uploadStatus");
@@ -7,11 +13,7 @@ window.uploadResult = function () {
   const progressBox = document.querySelector(".progress-box");
   const progressBar = document.getElementById("progressBar");
 
-  if (!fileInput || !status || !btn || !progressBox || !progressBar) {
-    return;
-  }
-
-  if (!fileInput.files.length) {
+  if (!fileInput || !fileInput.files.length) {
     status.textContent = "❌ Please select a file";
     status.className = "status-text status-failed";
     return;
@@ -25,46 +27,31 @@ window.uploadResult = function () {
   status.className = "status-text status-loading";
   progressBox.style.display = "block";
   progressBar.style.width = "0%";
-  progressBar.style.background = "linear-gradient(90deg, #22c55e, #16a34a)";
 
   const xhr = new XMLHttpRequest();
 
-  xhr.upload.onprogress = (e) => {
+  xhr.upload.onprogress = e => {
     if (e.lengthComputable) {
-      const percent = Math.round((e.loaded / e.total) * 100);
-      progressBar.style.width = percent + "%";
+      progressBar.style.width =
+        Math.round((e.loaded / e.total) * 100) + "%";
     }
   };
 
   xhr.onload = () => {
     btn.disabled = false;
 
-    let res;
-    try {
-      res = JSON.parse(xhr.responseText);
-    } catch {
-      status.textContent = "❌ Invalid server response";
-      status.className = "status-text status-failed";
-      progressBar.style.background = "#dc2626";
-      return;
-    }
-
-    if (xhr.status === 200 && res.success === true) {
-      progressBar.style.width = "100%";
+    if (xhr.status === 200) {
       status.textContent = "✅ Upload successful";
       status.className = "status-text status-success";
       loadAllResults();
     } else {
-      progressBar.style.background = "#dc2626";
-      status.textContent =
-        "❌ Upload failed: " + (res.message || "Server error");
+      status.textContent = "❌ Upload failed";
       status.className = "status-text status-failed";
     }
   };
 
   xhr.onerror = () => {
     btn.disabled = false;
-    progressBar.style.background = "#dc2626";
     status.textContent = "❌ Network error";
     status.className = "status-text status-failed";
   };
@@ -73,21 +60,52 @@ window.uploadResult = function () {
   xhr.send(formData);
 };
 
-function renderTable(rows) {
-  const thead = document.querySelector("#resultTable thead");
-  const tbody = document.querySelector("#resultTable tbody");
+/* ================= LOAD RESULTS ================= */
+window.loadAllResults = async function () {
+  try {
+    const res = await fetch(`${API}/api/results`);
+    if (!res.ok) throw new Error("API error");
 
-  if (!thead || !tbody) return;
+    const data = await res.json();
+    renderTable(Array.isArray(data) ? data : []);
+  } catch (err) {
+    console.error("❌ Failed to load results:", err);
+  }
+};
+
+/* ================= TABLE RENDER (SAFE) ================= */
+function renderTable(rows) {
+  const table = document.getElementById("resultTable");
+  if (!table) {
+    console.error("❌ Table with id 'resultTable' not found");
+    return;
+  }
+
+  let thead = table.querySelector("thead");
+  let tbody = table.querySelector("tbody");
+
+  /* Auto-create thead/tbody if missing */
+  if (!thead) {
+    thead = document.createElement("thead");
+    table.appendChild(thead);
+  }
+  if (!tbody) {
+    tbody = document.createElement("tbody");
+    table.appendChild(tbody);
+  }
 
   thead.innerHTML = "";
   tbody.innerHTML = "";
 
-  if (!rows || rows.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="100%">No data found</td></tr>`;
+  if (!rows.length) {
+    tbody.innerHTML = `<tr><td colspan="100%">No data available</td></tr>`;
     return;
   }
 
+  /* ===== UNIQUE SUBJECTS ===== */
   const subjects = [...new Set(rows.map(r => r.subject_title))];
+
+  /* ===== GROUP BY STUDENT ===== */
   const students = {};
 
   rows.forEach(r => {
@@ -102,48 +120,45 @@ function renderTable(rows) {
     }
 
     students[r.regno].subjects[r.subject_title] =
-      `${r.total} (${r.result})`;
+      `${r.total ?? "-"} (${r.result ?? "-"})`;
 
-    if (r.result === "FAIL") students[r.regno].arrears++;
+    // College rule: RA or AA = arrear
+    if (r.result === "RA" || r.result === "AA") {
+      students[r.regno].arrears++;
+    }
   });
 
-  let headerRow =
-    `<tr><th>Reg No</th><th>Name</th><th>Semester</th>`;
-  subjects.forEach(s => headerRow += `<th>${s}</th>`);
-  headerRow += `<th>Arrears</th></tr>`;
-  thead.innerHTML = headerRow;
+  /* ===== TABLE HEADER ===== */
+  let header = `<tr>
+    <th>Reg No</th>
+    <th>Name</th>
+    <th>Semester</th>
+  `;
+  subjects.forEach(s => (header += `<th>${s}</th>`));
+  header += `<th>Arrears</th></tr>`;
+  thead.innerHTML = header;
 
+  /* ===== TABLE ROWS ===== */
   Object.values(students).forEach(s => {
-    let row =
-      `<tr>
-        <td>${s.regno}</td>
-        <td>${s.name}</td>
-        <td>${s.semester}</td>`;
+    let row = `<tr>
+      <td>${s.regno}</td>
+      <td>${s.name}</td>
+      <td>${s.semester ?? "-"}</td>
+    `;
 
-    subjects.forEach(sub =>
-      row += `<td>${s.subjects[sub] || "-"}</td>`
-    );
+    subjects.forEach(sub => {
+      row += `<td>${s.subjects[sub] || "-"}</td>`;
+    });
 
-    row +=
-      `<td style="color:${s.arrears ? "red" : "green"}">
+    row += `
+      <td style="color:${s.arrears ? "red" : "green"}; font-weight:bold">
         ${s.arrears}
-      </td></tr>`;
+      </td>
+    </tr>`;
 
     tbody.innerHTML += row;
   });
 }
 
-window.loadAllResults = async function () {
-  try {
-    const res = await fetch(`${API}/results`);
-    const data = await res.json();
-    renderTable(data);
-  } catch {}
-};
-
-function goToDashboard() {
-  window.location.href =
-    "https://dashboard-teal-seven-78.vercel.app/";
-}
-
+/* ================= AUTO LOAD ================= */
 document.addEventListener("DOMContentLoaded", loadAllResults);
