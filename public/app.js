@@ -1,11 +1,13 @@
-/* ================= API AUTO SWITCH ================= */
+/* ================= API AUTO SWITCH (FIXED) ================= */
 const API =
   window.location.hostname === "localhost" ||
   window.location.hostname === "127.0.0.1"
     ? "http://localhost:5000"
-    : "https://backendocr-28.onrender.com";
+    : "https://backend-optical-character-recogniation.onrender.com";
 
-/* ================= UPLOAD ================= */
+console.log("🌐 Using API:", API);
+
+/* ================= UPLOAD FUNCTION ================= */
 window.uploadResult = function () {
   const fileInput = document.getElementById("file");
   const status = document.getElementById("uploadStatus");
@@ -30,7 +32,7 @@ window.uploadResult = function () {
 
   const xhr = new XMLHttpRequest();
 
-  xhr.upload.onprogress = e => {
+  xhr.upload.onprogress = (e) => {
     if (e.lengthComputable) {
       progressBar.style.width =
         Math.round((e.loaded / e.total) * 100) + "%";
@@ -39,6 +41,8 @@ window.uploadResult = function () {
 
   xhr.onload = () => {
     btn.disabled = false;
+
+    console.log("Server Response:", xhr.responseText);
 
     if (xhr.status === 200) {
       status.textContent = "✅ Upload successful";
@@ -52,30 +56,40 @@ window.uploadResult = function () {
 
   xhr.onerror = () => {
     btn.disabled = false;
-    status.textContent = "❌ Network error";
+    status.textContent = "❌ Network error (CORS or Server Down)";
     status.className = "status-text status-failed";
   };
 
-  xhr.open("POST", `${API}/upload-test`, true);
+  const uploadURL = `${API}/upload-test`;
+  console.log("📤 Uploading to:", uploadURL);
+
+  xhr.open("POST", uploadURL, true);
   xhr.send(formData);
 };
 
 /* ================= LOAD RESULTS ================= */
 window.loadAllResults = async function () {
   try {
-    const res = await fetch(`${API}/api/results`);
+    const resultURL = `${API}/api/results`;
+
+    console.log("📥 Fetching results from:", resultURL);
+
+    const res = await fetch(resultURL);
+
     if (!res.ok) throw new Error("API error");
 
     const data = await res.json();
+
     renderTable(Array.isArray(data) ? data : []);
   } catch (err) {
     console.error("❌ Failed to load results:", err);
   }
 };
 
-/* ================= TABLE RENDER (SAFE) ================= */
+/* ================= TABLE RENDER (SAFE VERSION) ================= */
 function renderTable(rows) {
   const table = document.getElementById("resultTable");
+
   if (!table) {
     console.error("❌ Table with id 'resultTable' not found");
     return;
@@ -84,11 +98,11 @@ function renderTable(rows) {
   let thead = table.querySelector("thead");
   let tbody = table.querySelector("tbody");
 
-  /* Auto-create thead/tbody if missing */
   if (!thead) {
     thead = document.createElement("thead");
     table.appendChild(thead);
   }
+
   if (!tbody) {
     tbody = document.createElement("tbody");
     table.appendChild(tbody);
@@ -103,26 +117,25 @@ function renderTable(rows) {
   }
 
   /* ===== UNIQUE SUBJECTS ===== */
-  const subjects = [...new Set(rows.map(r => r.subject_title))];
+  const subjects = [...new Set(rows.map((r) => r.subject_title))];
 
   /* ===== GROUP BY STUDENT ===== */
   const students = {};
 
-  rows.forEach(r => {
+  rows.forEach((r) => {
     if (!students[r.regno]) {
       students[r.regno] = {
         regno: r.regno,
         name: r.name,
         semester: r.semester,
         subjects: {},
-        arrears: 0
+        arrears: 0,
       };
     }
 
     students[r.regno].subjects[r.subject_title] =
       `${r.total ?? "-"} (${r.result ?? "-"})`;
 
-    // College rule: RA or AA = arrear
     if (r.result === "RA" || r.result === "AA") {
       students[r.regno].arrears++;
     }
@@ -130,31 +143,33 @@ function renderTable(rows) {
 
   /* ===== TABLE HEADER ===== */
   let header = `<tr>
-    <th>Reg No</th>
-    <th>Name</th>
-    <th>Semester</th>
+      <th>Reg No</th>
+      <th>Name</th>
+      <th>Semester</th>
   `;
-  subjects.forEach(s => (header += `<th>${s}</th>`));
+
+  subjects.forEach((s) => (header += `<th>${s}</th>`));
+
   header += `<th>Arrears</th></tr>`;
   thead.innerHTML = header;
 
   /* ===== TABLE ROWS ===== */
-  Object.values(students).forEach(s => {
+  Object.values(students).forEach((s) => {
     let row = `<tr>
-      <td>${s.regno}</td>
-      <td>${s.name}</td>
-      <td>${s.semester ?? "-"}</td>
+        <td>${s.regno}</td>
+        <td>${s.name}</td>
+        <td>${s.semester ?? "-"}</td>
     `;
 
-    subjects.forEach(sub => {
+    subjects.forEach((sub) => {
       row += `<td>${s.subjects[sub] || "-"}</td>`;
     });
 
     row += `
-      <td style="color:${s.arrears ? "red" : "green"}; font-weight:bold">
-        ${s.arrears}
-      </td>
-    </tr>`;
+        <td style="color:${s.arrears ? "red" : "green"}; font-weight:bold">
+          ${s.arrears}
+        </td>
+      </tr>`;
 
     tbody.innerHTML += row;
   });
